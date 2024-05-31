@@ -1,0 +1,13 @@
+command to run:
+python -m src.main +experiment=re10k checkpointing.load=checkpoints/re10k.ckpt mode=test +dataset/view_samper=evaluation test.save_video=true test.save_image=false  test.compute_scores=false
+
+problem with hydra:
+put + in front of dataset/view_samper so that a new field is created
+
+problems with diff_gaussian_rasterization
+make sure the right cuda version is installed: check "echo $env:CUDA_HOME"; set CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8
+
+problems with '|' of combing two typeddict
+use python 3.10
+
+
