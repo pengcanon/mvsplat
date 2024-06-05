@@ -40,7 +40,7 @@ from ..visualization.validation_in_3d import render_cameras, render_projections
 from .decoder.decoder import Decoder, DepthRenderingMode
 from .encoder import Encoder
 from .encoder.visualization.encoder_visualizer import EncoderVisualizer
-
+import numpy as np
 
 @dataclass
 class OptimizerCfg:
@@ -183,7 +183,7 @@ class ModelWrapper(LightningModule):
 
         # Render Gaussians.
         with self.benchmarker.time("encoder"):
-            gaussians = self.encoder(
+            gaussians, depths = self.encoder(
                 batch["context"],
                 self.global_step,
                 deterministic=False,
@@ -204,6 +204,28 @@ class ModelWrapper(LightningModule):
         path = self.test_cfg.output_path / name
         images_prob = output.color[0]
         rgb_gt = batch["target"]["image"][0]
+
+
+        #this is a hack to visualize depth maps after running test. I have changed encoder_costvolume.py file to make the forward() in the encodercostvolume class to return both gaussians and depths
+        depths = rearrange(
+            depths, "b v (h w) srf s -> b v h w srf s", h=h, w=w
+        )
+        depths = depths.squeeze()
+        d_id = 0
+        for depth in depths:
+            depth_np = depth.cpu().numpy()
+
+            # Compute the percentiles
+            vmin, vmax = np.percentile(depth_np, [1, 97])  # change the values as needed
+
+            # Clip depth values to the computed percentiles
+            depth_np = np.clip(depth_np, vmin, vmax)
+
+            # Convert back to tensor
+            depth = torch.from_numpy(depth_np).to(depth.device)
+            depth = (depth - depth.min()) / (depth.max() - depth.min())
+            save_image(depth, path / scene / f"depth/{d_id:0>6}.png")
+            d_id +=1
 
         # Save images.
         if self.test_cfg.save_image:

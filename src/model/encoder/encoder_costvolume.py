@@ -24,7 +24,7 @@ from ...global_cfg import get_cfg
 
 from .epipolar.epipolar_sampler import EpipolarSampler
 from ..encodings.positional_encoding import PositionalEncoding
-
+from typing import Tuple
 
 @dataclass
 class OpacityMappingCfg:
@@ -146,7 +146,7 @@ class EncoderCostVolume(Encoder[EncoderCostVolumeCfg]):
         deterministic: bool = False,
         visualization_dump: Optional[dict] = None,
         scene_names: Optional[list] = None,
-    ) -> Gaussians:
+    ) -> Tuple[Gaussians, Tensor]:
         device = context["image"].device
         b, v, _, h, w = context["image"].shape
 
@@ -244,7 +244,7 @@ class EncoderCostVolume(Encoder[EncoderCostVolumeCfg]):
                 opacity_multiplier * gaussians.opacities,
                 "b v r srf spp -> b (v r srf spp)",
             ),
-        )
+        ), depths
 
     def get_data_shim(self) -> DataShim:
         def data_shim(batch: BatchedExample) -> BatchedExample:
