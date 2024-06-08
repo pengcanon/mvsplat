@@ -145,10 +145,53 @@ def train(cfg_dict: DictConfig):
             datamodule=data_module,
             ckpt_path=checkpoint_path,
         )
+@hydra.main(
+    version_base=None,
+    config_path="../config",
+    config_name="main",
+)
+def infer(cfg_dict: DictConfig):
+    cfg = load_typed_root_config(cfg_dict)
+    set_cfg(cfg_dict)
+    torch.manual_seed(cfg_dict.seed)
+    checkpoint_path = update_checkpoint_path(cfg.checkpointing.load, cfg.wandb)
+    step_tracker = StepTracker()
+    encoder, encoder_visualizer = get_encoder(cfg.model.encoder)
+    data_module = DataModule(
+        cfg.dataset,
+        cfg.data_loader,
+        step_tracker,
+    )
+    model_wrapper = ModelWrapper(
+        cfg.optimizer,
+        cfg.test,
+        cfg.train,
+        encoder,
+        encoder_visualizer,
+        get_decoder(cfg.model.decoder, cfg.dataset),
+        get_losses(cfg.loss),
+        step_tracker
+    )
+    checkpoint = torch.load(checkpoint_path)
+    state_dict = checkpoint['state_dict']   
+    model_wrapper.load_state_dict(state_dict)
+    data_loader = data_module.test_dataloader()
+    # Put the model in evaluation mode
+    for batch in data_loader:
+        break
+    model_wrapper.eval()
+
+    # Run inference
+    with torch.no_grad():
+        # Replace this with your actual inference code
+
+        result = model_wrapper.inference(batch)
+        print("success")
 
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     torch.set_float32_matmul_precision('high')
 
-    train()
+    #train()
+    infer()

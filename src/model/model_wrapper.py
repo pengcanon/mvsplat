@@ -297,6 +297,41 @@ class ModelWrapper(LightningModule):
                 self.test_cfg.output_path / name / "peak_memory.json"
             )
             self.benchmarker.summarize()
+    
+    def inference(self, batch):
+        # Prepare the batch data
+        batch: BatchedExample = self.data_shim(batch)
+        b, v, _, h, w = batch["target"]["image"].shape
+        assert b == 1
+
+        # Pass the data through the encoder
+        gaussians, depths = self.encoder(
+            batch["context"],
+            self.global_step,
+            deterministic=True,  # Set to True for inference
+        )
+        depths = rearrange(
+            depths, "b v (h w) srf s -> b v h w srf s", h=h, w=w
+        )
+        depths = depths.squeeze()
+        """
+        d_id = 0
+        for depth in depths:
+            depth_np = depth.cpu().numpy()
+
+            # Compute the percentiles
+            vmin, vmax = np.percentile(depth_np, [1, 97])  # change the values as needed
+
+            # Clip depth values to the computed percentiles
+            depth_np = np.clip(depth_np, vmin, vmax)
+
+            # Convert back to tensor
+            depth = torch.from_numpy(depth_np).to(depth.device)
+            depth = (depth - depth.min()) / (depth.max() - depth.min())
+            save_image(depth, path / scene / f"depth/{d_id:0>6}.png")
+            d_id +=1
+        """
+        return depths
 
     @rank_zero_only
     def validation_step(self, batch, batch_idx):
